@@ -1,9 +1,11 @@
 {
   "name": "launchdarkly-client-wrapper",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Feature Flag Client Wrapper",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
+    "build": "babel index.js -d lib/",
+    "prepublish": "babel index.js -d lib/"
   },
   "author": "Roger de la Fuente",
   "license": "ISC",
@@ -13,6 +15,11 @@
     "react-dom": "^16.4.2"
   },
   "devDependencies": {
+    "@babel/cli": "^7.0.0",
+    "@babel/core": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "@babel/preset-flow": "^7.0.0",
+    "@babel/preset-react": "^7.0.0",
     "flow-bin": "^0.79.1"
   }
 }
