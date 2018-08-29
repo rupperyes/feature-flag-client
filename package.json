@@ -1,7 +1,7 @@
 {
-  "name": "feature-flag-client",
+  "name": "launchdarkly-client-wrapper",
   "version": "0.0.1",
-  "description": "Feature Flag Client",
+  "description": "Feature Flag Client Wrapper",
   "main": "index.js",
   "scripts": {
   },
