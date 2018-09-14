@@ -11,9 +11,12 @@ export interface LDClientExtended extends LDClient {
   change: (flags: LDFlagSet) => void,
 }
 
+const devTooling = process.env.NODE_ENV === 'development' ||
+  process.env.REACT_APP_FFS_DEV_TOOLS_ACTIVE === 'true';
+
 const extendClient = (client: LDClient): LDClientExtended => {
   const callbacks: ((flags: LDFlagSet) => void)[] = [];
-  const localStore = process.env.NODE_ENV === 'development' ? JSON.parse(cookies.get('force_ffs') || '{}') || {} : {};
+  const localStore = devTooling ? JSON.parse(cookies.get('force_ffs') || '{}') || {} : {};
   const allFlagsOriginal = client.allFlags;
 
   return Object.assign(client, {
@@ -29,7 +32,7 @@ const extendClient = (client: LDClient): LDClientExtended => {
       callbacks.push(callback);
     },
     change: (flags: LDFlagSet) => {
-      if (process.env.NODE_ENV === 'development') {
+      if (devTooling) {
         callbacks.forEach(c => c(flags));
         Object.assign(localStore, flags);
         cookies.set('force_ffs', JSON.stringify(localStore));
@@ -51,7 +54,7 @@ let init = (
 
 const featureFlagStore: { [key: string]: LDFlagValue } = {};
 
-if (process.env.NODE_ENV === 'development') {
+if (devTooling) {
   const initializeRef = init;
   let client: LDClientExtended;
   init = (apiKey: string, user: LDUser, options?: LDOptions): LDClient => {
