@@ -1,6 +1,6 @@
 {
   "name": "launchdarkly-client-wrapper",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Feature Flag Client Wrapper",
   "main": "lib/index.js",
   "scripts": {
@@ -10,6 +10,7 @@
   "author": "Roger de la Fuente",
   "license": "ISC",
   "dependencies": {
+    "js-cookie": "^2.2.0",
     "ldclient-js": "^2.5.0",
     "react": "^16.4.2",
     "react-dom": "^16.4.2"

@@ -1,7 +1,8 @@
 // @flow
-import {initialize, LDClient, LDFlagSet, LDFlagValue, LDOptions, LDUser} from 'ldclient-js';
+import { initialize, LDClient, LDFlagSet, LDFlagValue, LDOptions, LDUser } from 'ldclient-js';
 import React from 'react';
 import ReactDOM from 'react-dom';
+import cookies from 'js-cookie';
 
 export interface LDClientExtended extends LDClient {
   getBoolean: (featureKey: string, defaultValue?: boolean) => Promise<boolean>,
@@ -12,7 +13,7 @@ export interface LDClientExtended extends LDClient {
 
 const extendClient = (client: LDClient): LDClientExtended => {
   const callbacks: ((flags: LDFlagSet) => void)[] = [];
-  const localStore = process.env.NODE_ENV === 'development' ? JSON.parse(localStorage.getItem('dev_ffs') || '{}') || {} : {};
+  const localStore = process.env.NODE_ENV === 'development' ? JSON.parse(cookies.get('force_ffs') || '{}') || {} : {};
   const allFlagsOriginal = client.allFlags;
 
   return Object.assign(client, {
@@ -31,7 +32,7 @@ const extendClient = (client: LDClient): LDClientExtended => {
       if (process.env.NODE_ENV === 'development') {
         callbacks.forEach(c => c(flags));
         Object.assign(localStore, flags);
-        localStorage.setItem('dev_ffs', JSON.stringify(localStore));
+        cookies.set('force_ffs', JSON.stringify(localStore));
       }
     },
     allFlags: () => ({
@@ -79,7 +80,7 @@ if (process.env.NODE_ENV === 'development') {
   const renderWindow = () => {
     open = true;
     ReactDOM.render(
-      <Overlay/>,
+      <Overlay />,
       root,
     );
   };
@@ -102,12 +103,12 @@ if (process.env.NODE_ENV === 'development') {
         {
           flagValue === true ?
             <span>
-                <button onClick={() => change(flagKey, false)}>Turn off</button>
-              </span>
+              <button onClick={() => change(flagKey, false)}>Turn off</button>
+            </span>
             :
             <span>
-                <button onClick={() => change(flagKey, true)}>Turn on</button>
-              </span>
+              <button onClick={() => change(flagKey, true)}>Turn on</button>
+            </span>
         }
       </span>
       <span style={{
@@ -138,7 +139,7 @@ if (process.env.NODE_ENV === 'development') {
     return (
       <div style={style} role="dialog" onClick={e => e.stopPropagation()}>
         {Object.keys(flags).map(key =>
-          <FlagEntry key={key} flagKey={key} flagValue={flags[key]}/>)}
+          <FlagEntry key={key} flagKey={key} flagValue={flags[key]} />)}
       </div>
     );
   };
@@ -156,7 +157,7 @@ if (process.env.NODE_ENV === 'development') {
 
     return (
       <div style={style} onClick={removeWindow}>
-        <Modal/>
+        <Modal />
       </div>
     );
   };
