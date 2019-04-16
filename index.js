@@ -1,6 +1,7 @@
 // @flow
 import { initialize, LDClient, LDFlagSet, LDFlagValue, LDOptions, LDUser } from 'ldclient-js';
-import React from 'react';
+import React, { useState } from 'react';
+import { unset } from 'lodash';
 import ReactDOM from 'react-dom';
 import cookies from 'js-cookie';
 
@@ -38,10 +39,25 @@ const extendClient = (client: LDClient): LDClientExtended => {
         cookies.set('force_ffs', JSON.stringify(localStore));
       }
     },
+    reset: (flag: string) => {
+      if (devTooling) {
+        callbacks.forEach(c => c({ [flag]: allFlagsOriginal()[flag] }));
+        unset(localStore, flag);
+        cookies.set('force_ffs', JSON.stringify(localStore));
+      }
+    },
+    resetAll: () => {
+      if (devTooling) {
+        callbacks.forEach(c => c(allFlagsOriginal()));
+        Object.keys(localStore).forEach(k => unset(localStore, k));
+        cookies.set('force_ffs', JSON.stringify(localStore));
+      }
+    },
     allFlags: () => ({
       ...allFlagsOriginal(),
       ...localStore,
     }),
+    isForced: flag => localStore[flag] !== undefined,
   });
 };
 
@@ -96,53 +112,134 @@ if (devTooling) {
   const change = (flag: string, value: any) => {
     console.log('changing', flag, 'to', value);
     client.change({ [flag]: value });
+  };
+
+  const FlagEntry = ({ flagKey, flagValue, forcedIn }) => {
+    const [val, setVal] = useState(flagValue);
+    const [forced, setForced] = useState(forcedIn);
+    const onToggle = () => {
+      setVal(!val);
+      change(flagKey, !val);
+      setForced(true);
+    };
+
+    const onReset = () => {
+      setVal(flagValue);
+      change(flagKey, flagValue);
+      setForced(false);
+      client.reset(flagKey);
+    };
+
+    return (
+      <div style={{ margin: '4px 0' }}>
+        <span style={{ width: '60px', display: 'inline-block' }}>
+          {
+            flagValue === true ?
+              <span>
+                <button onClick={onToggle}>Turn off</button>
+              </span>
+              :
+              <span>
+                <button onClick={onToggle}>Turn on</button>
+              </span>
+          }
+        </span>
+        <span style={{
+          width: '30px',
+          display: 'inline-block',
+          color: val === true ? 'darkgreen' : 'darkred',
+          fontWeight: val === true ? 'bold' : 'normal',
+        }}
+        >
+          {
+            val === true ? 'On' : 'Off'
+          }
+        </span>
+        <span>{flagKey}</span>
+        {forced &&
+        <div style={{
+          float: 'right',
+        }}
+        >
+          <span style={{
+            display: 'inline-block',
+            margin: '0 2px',
+            color: 'darkmagenta',
+            fontWeight: '500',
+            fontSize: 'small',
+          }}
+          >
+          Forced locally
+          </span>
+          <button onClick={onReset}>reset</button>
+        </div>
+        }
+
+      </div>
+    );
+  };
+
+  const resetAll = () => {
+    client.resetAll();
     removeWindow();
     renderWindow();
   };
 
-  const FlagEntry = ({ flagKey, flagValue }) => (
+  const SearchBox = ({ filter, onFilter }) => (
     <div style={{ margin: '4px 0' }}>
-      <span style={{ width: '60px', display: 'inline-block' }}>
-        {
-          flagValue === true ?
-            <span>
-              <button onClick={() => change(flagKey, false)}>Turn off</button>
-            </span>
-            :
-            <span>
-              <button onClick={() => change(flagKey, true)}>Turn on</button>
-            </span>
-        }
-      </span>
-      <span style={{
-        width: '30px',
-        display: 'inline-block',
-        color: flagValue === true ? 'darkgreen' : 'darkred',
-        fontWeight: flagValue === true ? 'bold' : 'normal',
-      }}
-      >
-        {
-          flagValue === true ? 'On' : 'Off'
-        }
-      </span>
-      <span>{flagKey}</span>
+      <input
+        style={{
+          padding: '2px 4px',
+        }}
+        type="text"
+        placeholder="Filter"
+        value={filter}
+        onChange={e => onFilter(e.target.value)}
+        autoFocus
+      />
+      <button onClick={resetAll} style={{ float: 'right' }}>Reset all</button>
     </div>
   );
 
   const Modal = () => {
+    const filter = localStorage.getItem('__ldwrapper.filter');
+    const [filterState, setFilterState] = useState(null);
+    const setFilter = (f) => {
+      localStorage.setItem('__ldwrapper.filter', f);
+      setFilterState(f);
+    };
     const style = {
       backgroundColor: '#fefefe',
-      margin: '20vh auto',
-      padding: '30px',
       border: '1px solid #888',
-      maxWidth: '500px',
       fontSize: '16px',
+      position: 'absolute',
+      padding: '16px',
+      top: '10vh',
+      left: '33vw',
+      width: '34vw',
+      height: '80vh',
+      overflowY: 'scroll',
     };
     const flags = client.allFlags();
+    const flagKeys = (filter && filter.length > 0 ?
+      Object.keys(flags)
+        .filter(f => f.indexOf(filter) !== -1) :
+      Object.keys(flags))
+      .filter(f => typeof flags[f] === 'boolean');
+
     return (
       <div style={style} role="dialog" onClick={e => e.stopPropagation()}>
-        {Object.keys(flags).map(key =>
-          <FlagEntry key={key} flagKey={key} flagValue={flags[key]} />)}
+        <h3>Feature flags</h3>
+        <SearchBox onFilter={setFilter} filter={filter} />
+        <div>
+          {flagKeys.map(key =>
+            (<FlagEntry
+              key={key}
+              flagKey={key}
+              flagValue={flags[key]}
+              forcedIn={client.isForced(key)}
+            />))}
+        </div>
       </div>
     );
   };
@@ -180,6 +277,8 @@ if (devTooling) {
       lastF = now;
     } else if (key === 'Escape' && open) {
       removeWindow();
+    } else {
+      lastF = 0;
     }
   });
 }
